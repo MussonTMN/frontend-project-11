@@ -1,7 +1,6 @@
 {
   "name": "@hexlet/code",
   "version": "1.0.0",
-  "type": "module",
   "description": "RSS-aggregator",
   "main": "index.js",
   "private": true,
@@ -27,14 +26,16 @@
     "@babel/core": "^7.20.12",
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
     "@babel/preset-env": "^7.20.2",
-    "bootstrap": "^5.2.3",
     "@webpack-cli/generators": "^3.0.1",
     "autoprefixer": "^10.4.13",
+    "bootstrap": "^5.2.3",
     "css-loader": "^6.7.3",
     "eslint": "^8.34.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.27.5",
+    "exports-loader": "^4.0.0",
     "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.7.2",
     "node-sass": "^8.0.0",
     "postcss-loader": "^7.0.2",
     "sass-loader": "^13.2.0",
@@ -46,6 +47,8 @@
   "dependencies": {
     "babel-loader": "^9.1.2",
     "bootstrap": "^5.2.3",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "on-change": "^4.0.2",
+    "yup": "^1.0.0"
   }
 }
