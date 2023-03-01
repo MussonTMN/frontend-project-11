@@ -5,7 +5,6 @@ const handleValidation = (elements, validationState) => {
       break;
 
     case 'valid':
-      elements.feedback.textContent = 'RSS успешно загружен';
       elements.feedback.classList.remove('text-danger');
       elements.feedback.classList.add('text-success');
       elements.input.classList.remove('is-invalid');
@@ -29,6 +28,10 @@ const render = (elements) => (path, value) => {
       break;
 
     case 'form.error':
+      elements.feedback.textContent = value;
+      break;
+
+    case 'loading':
       elements.feedback.textContent = value;
       break;
 
