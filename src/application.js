@@ -1,7 +1,8 @@
 import onChange from 'on-change';
 import * as yup from 'yup';
-// import _ from 'lodash';
 import i18next from 'i18next';
+import axios from 'axios';
+import _ from 'lodash';
 import render from './view';
 import resources from './locales/index';
 
@@ -17,28 +18,81 @@ i18next.init({
   },
 }));
 
+const validateUrl = (url, urlsList) => {
+  const urlSchema = yup.string().url().required().notOneOf(urlsList);
+  return urlSchema.validate(url, { abortEarly: false });
+};
+
+const getData = (url) => axios({
+  method: 'get',
+  url: `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(url)}`,
+  responseType: 'text',
+});
+
+const parseData = (response) => {
+  const parser = new DOMParser();
+  const data = parser.parseFromString(response, 'text/html');
+  return data;
+};
+
+const loadData = (doc, state) => {
+  const rss = doc.querySelector('rss');
+  if (!doc.contains(rss)) {
+    console.log(i18next.t('errors.noRss'));
+    throw new Error(i18next.t('errors.noRss'));
+  }
+  const channel = rss.querySelector('channel');
+  const feedName = channel.querySelector('title');
+  const feedDescription = channel.querySelector('description');
+
+  const feed = {
+    name: feedName.textContent,
+    description: feedDescription.textContent,
+    id: _.uniqueId(),
+  };
+  state.feeds.push(feed);
+
+  const postsLIst = channel.querySelectorAll('item');
+  const posts = Array.from(postsLIst)
+    .map((item) => {
+      const name = item.querySelector('title').textContent;
+      const description = item.querySelector('description').textContent;
+      const link = item.querySelector('link').nextSibling.textContent.replace(/\\n|\\t/g, '');
+      const feedId = feed.id;
+      const id = _.uniqueId();
+      return {
+        name, description, link, feedId, id,
+      };
+    });
+  state.posts.push(...posts);
+};
+
 export default () => {
   const elements = {
+    names: {
+      feedsName: i18next.t('feeds'),
+      postsName: i18next.t('posts'),
+      button: i18next.t('button'),
+    },
     form: document.querySelector('form'),
     input: document.querySelector('#url-input'),
     feedback: document.querySelector('.feedback'),
+    feeds: document.querySelector('.feeds'),
+    posts: document.querySelector('.posts'),
   };
 
   const initialState = {
     form: {
-      validationState: 'empty',
+      validationState: null,
       urlsList: [],
-      error: '',
-      loading: '',
+      error: null,
+      loading: null,
     },
+    feeds: [],
+    posts: [],
   };
 
   const state = onChange(initialState, render(elements));
-
-  const validateUrl = (url, urlsList) => {
-    const urlSchema = yup.string().url().required().notOneOf(urlsList);
-    return urlSchema.validate(url, { abortEarly: false });
-  };
 
   elements.form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -49,10 +103,14 @@ export default () => {
         state.form.urlsList.push(content);
         state.form.validationState = 'valid';
         state.form.loading = i18next.t('succusess');
+        return getData(content);
       })
+      .then((response) => parseData(response.data))
+      .then((document) => loadData(document, state))
       .catch((er) => {
         state.form.validationState = 'invalid';
         const [error] = er.errors;
+        console.log(er);
         state.form.error = error;
       });
   });

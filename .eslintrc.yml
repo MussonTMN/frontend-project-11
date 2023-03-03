@@ -10,5 +10,6 @@ rules: {
   no-console: 0,
   no-underscore-dangle: [2, { "allow": ["__filename", "__dirname"] }],
   import/extensions: 0,
-  no-param-reassign: 0
+  no-param-reassign: 0,
+  import/no-extraneous-dependencies: 0,
 }
