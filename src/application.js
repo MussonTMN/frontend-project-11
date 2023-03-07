@@ -2,7 +2,7 @@ import onChange from 'on-change';
 import * as yup from 'yup';
 import i18next from 'i18next';
 import axios from 'axios';
-import _ from 'lodash';
+import _, { set } from 'lodash';
 import render from './view';
 import resources from './locales/index';
 
@@ -38,7 +38,6 @@ const parseData = (response) => {
 const loadData = (doc, state) => {
   const rss = doc.querySelector('rss');
   if (!doc.contains(rss)) {
-    console.log(i18next.t('errors.noRss'));
     throw new Error(i18next.t('errors.noRss'));
   }
   const channel = rss.querySelector('channel');
@@ -50,21 +49,27 @@ const loadData = (doc, state) => {
     description: feedDescription.textContent,
     id: _.uniqueId(),
   };
-  state.feeds.push(feed);
+  state.feeds = _.unionBy(state.feeds, [feed], 'name');
 
   const postsLIst = channel.querySelectorAll('item');
   const posts = Array.from(postsLIst)
-    .map((item) => {
-      const name = item.querySelector('title').textContent;
-      const description = item.querySelector('description').textContent;
-      const link = item.querySelector('link').nextSibling.textContent.replace(/\\n|\\t/g, '');
-      const feedId = feed.id;
-      const id = _.uniqueId();
-      return {
-        name, description, link, feedId, id,
-      };
-    });
-  state.posts.push(...posts);
+    .map((item) => ({
+      name: item.querySelector('title').textContent,
+      description: item.querySelector('description').textContent,
+      link: item.querySelector('link').nextSibling.textContent.replace(/\\n|\\t/g, ''),
+      feedId: feed.id,
+      id: _.uniqueId(),
+    }));
+  state.posts = _.unionBy(state.posts, posts, 'name');
+};
+
+const checkNewFeed = (state, time) => {
+  state.form.urlsList.forEach((url) => {
+    getData(url)
+      .then((response) => parseData(response.data))
+      .then((document) => loadData(document, state));
+  });
+  setTimeout(checkNewFeed, time, state, time);
 };
 
 export default () => {
@@ -107,10 +112,10 @@ export default () => {
       })
       .then((response) => parseData(response.data))
       .then((document) => loadData(document, state))
+      .then(() => checkNewFeed(state, 5000))
       .catch((er) => {
         state.form.validationState = 'invalid';
         const [error] = er.errors;
-        console.log(er);
         state.form.error = error;
       });
   });
