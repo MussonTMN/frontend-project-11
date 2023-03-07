@@ -2,7 +2,7 @@ import onChange from 'on-change';
 import * as yup from 'yup';
 import i18next from 'i18next';
 import axios from 'axios';
-import _, { set } from 'lodash';
+import _ from 'lodash';
 import render from './view';
 import resources from './locales/index';
 
