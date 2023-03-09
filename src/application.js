@@ -6,18 +6,6 @@ import _ from 'lodash';
 import render from './view';
 import resources from './locales/index';
 
-i18next.init({
-  lng: 'ru',
-  resources,
-}).then(yup.setLocale({
-  string: {
-    url: i18next.t('errors.url'),
-  },
-  mixed: {
-    notOneOf: i18next.t('errors.notOneOf'),
-  },
-}));
-
 const validateUrl = (url, urlsList) => {
   const urlSchema = yup.string().url().required().notOneOf(urlsList);
   return urlSchema.validate(url, { abortEarly: false });
@@ -73,11 +61,27 @@ const checkNewFeed = (state, time) => {
 };
 
 export default () => {
+  const i18nInstance = i18next.createInstance();
+  i18nInstance.init({
+    lng: 'ru',
+    resources,
+  }).then(yup.setLocale({
+    string: {
+      url: i18nInstance.t('errors.url'),
+    },
+    mixed: {
+      notOneOf: i18nInstance.t('errors.notOneOf'),
+    },
+  }));
+
   const elements = {
-    names: {
-      feedsName: i18next.t('feeds'),
-      postsName: i18next.t('posts'),
-      button: i18next.t('button'),
+    modal: {
+      main: document.querySelector('#modal'),
+      title: document.querySelector('.modal-title'),
+      cross: document.querySelector('.btn-close'),
+      body: document.querySelector('.modal-body'),
+      readButton: document.querySelector('.btn-primary'),
+      close: document.querySelector('.btn-secondary'),
     },
     form: document.querySelector('form'),
     input: document.querySelector('#url-input'),
@@ -88,6 +92,7 @@ export default () => {
 
   const initialState = {
     form: {
+      processState: 'init',
       validationState: null,
       urlsList: [],
       error: null,
@@ -95,9 +100,13 @@ export default () => {
     },
     feeds: [],
     posts: [],
+    uiState: {
+      visitedPosts: new Set(),
+      modalPost: null,
+    },
   };
 
-  const state = onChange(initialState, render(elements));
+  const state = onChange(initialState, render(elements, i18nInstance, initialState));
 
   elements.form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -107,7 +116,7 @@ export default () => {
       .then((content) => {
         state.form.urlsList.push(content);
         state.form.validationState = 'valid';
-        state.form.loading = i18next.t('succusess');
+        state.form.loading = i18nInstance.t('succusess');
         return getData(content);
       })
       .then((response) => parseData(response.data))
@@ -118,5 +127,17 @@ export default () => {
         const [error] = er.errors;
         state.form.error = error;
       });
+  });
+
+  elements.posts.addEventListener('click', (e) => {
+    const postId = e.target.dataset.id;
+    if (postId) {
+      state.uiState.visitedPosts.add(postId);
+    }
+  });
+
+  elements.modal.main.addEventListener('shown.bs.modal', (e) => {
+    const postId = e.relatedTarget.getAttribute('data-id');
+    state.uiState.modalPost = state.posts.find(({ id }) => id === postId);
   });
 };

@@ -35,8 +35,8 @@ const createContainer = (name) => {
   return divContainer;
 };
 
-const handleFeeds = (elements, feeds) => {
-  const feedsDiv = createContainer(elements.names.feedsName);
+const handleFeeds = (elements, feeds, i18nInstance) => {
+  const feedsDiv = createContainer(i18nInstance.t('feeds'));
 
   const feedsList = document.createElement('ul');
   feedsList.classList.add('list-group', 'border-0', 'rounded-0');
@@ -60,19 +60,20 @@ const handleFeeds = (elements, feeds) => {
   elements.feeds.replaceChildren(feedsDiv);
 };
 
-const handlePosts = (elements, posts) => {
-  const postsDiv = createContainer(elements.names.postsName);
+const handlePosts = (elements, i18nInstance, state) => {
+  const postsDiv = createContainer(i18nInstance.t('posts'));
 
   const postsList = document.createElement('ul');
   postsList.classList.add('list-group', 'border-0', 'rounded-0');
 
-  posts.forEach((item) => {
+  state.posts.forEach((item) => {
     const post = document.createElement('li');
     post.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
 
     const link = document.createElement('a');
     link.setAttribute('href', item.link);
-    link.classList.add('fw-bold');
+    const titleStyle = state.uiState.visitedPosts.has(item.id) ? ['fw-normal', 'link-secondary'] : ['fw-bold'];
+    link.classList.add(...titleStyle);
     link.setAttribute('data-id', item.id);
     link.setAttribute('target', '_blank');
     link.setAttribute('rel', 'noopener noreferrer');
@@ -83,7 +84,7 @@ const handlePosts = (elements, posts) => {
     button.setAttribute('data-id', item.id);
     button.setAttribute('data-bs-toggle', 'modal');
     button.setAttribute('data-bs-target', '#modal');
-    button.textContent = elements.names.button;
+    button.textContent = i18nInstance.t('button');
 
     post.append(link, button);
     postsList.prepend(post);
@@ -92,7 +93,15 @@ const handlePosts = (elements, posts) => {
   elements.posts.replaceChildren(postsDiv);
 };
 
-const render = (elements) => (path, value) => {
+const getModalWindow = (elements, post) => {
+  const { title, body, readButton } = elements.modal;
+  const { name, description, link } = post;
+  title.textContent = name;
+  body.textContent = description;
+  readButton.setAttribute('href', link);
+};
+
+const render = (elements, i18nInstance, state) => (path, value) => {
   switch (path) {
     case 'form.validationState':
       handleValidation(elements, value);
@@ -107,11 +116,16 @@ const render = (elements) => (path, value) => {
       break;
 
     case 'feeds':
-      handleFeeds(elements, value);
+      handleFeeds(elements, value, i18nInstance);
       break;
 
+    case 'uiState.visitedPosts':
     case 'posts':
-      handlePosts(elements, value);
+      handlePosts(elements, i18nInstance, state);
+      break;
+
+    case 'uiState.modalPost':
+      getModalWindow(elements, value);
       break;
 
     default:
