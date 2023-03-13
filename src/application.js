@@ -125,7 +125,7 @@ export default () => {
       .catch((er) => {
         state.form.validationState = 'invalid';
         const error = er.message;
-        state.form.error = error;
+        state.form.error = error === 'Network Error' ? i18nInstance.t('errors.network') : error;
       });
   });
 

@@ -7,8 +7,9 @@ export default {
     errors: {
       url: 'Link must be a valid URL',
       notOneOf: 'RSS already exists',
-      network: 'Not Acceptable',
       noRss: 'Resource does not contain valid RSS',
+      network: 'Network Error',
+      defaultError: 'Something went wrong',
     },
   },
 };
