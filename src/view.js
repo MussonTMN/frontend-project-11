@@ -1,6 +1,7 @@
-const handleValidation = (elements, validationState) => {
+const handleValidation = (elements, validationState, i18nInstance) => {
   switch (validationState) {
     case 'valid':
+      elements.feedback.textContent = i18nInstance.t('succusess');
       elements.feedback.classList.remove('text-danger');
       elements.feedback.classList.add('text-success');
       elements.input.classList.remove('is-invalid');
@@ -104,14 +105,10 @@ const getModalWindow = (elements, post) => {
 const render = (elements, i18nInstance, state) => (path, value) => {
   switch (path) {
     case 'form.validationState':
-      handleValidation(elements, value);
+      handleValidation(elements, value, i18nInstance);
       break;
 
     case 'form.error':
-      elements.feedback.textContent = value;
-      break;
-
-    case 'form.loading':
       elements.feedback.textContent = value;
       break;
 

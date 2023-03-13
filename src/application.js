@@ -11,24 +11,26 @@ const validateUrl = (url, urlsList) => {
   return urlSchema.validate(url, { abortEarly: false });
 };
 
-const getData = (url) => axios({
-  method: 'get',
-  url: `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(url)}`,
-  responseType: 'text',
-});
+const getData = (url) => {
+  const originsLink = 'https://allorigins.hexlet.app/get';
+  const preparedURL = new URL(originsLink);
+  preparedURL.searchParams.set('disableCache', 'true');
+  preparedURL.searchParams.set('url', url);
+  return axios.get(preparedURL);
+};
 
-const parseData = (response) => {
+const parseData = (response, error) => {
   const parser = new DOMParser();
-  const data = parser.parseFromString(response, 'text/html');
-  return data;
+  const xml = parser.parseFromString(response, 'text/xml');
+  const rss = xml.querySelector('rss');
+  if (!xml.contains(rss)) {
+    throw new Error(error);
+  }
+  return xml;
 };
 
 const loadData = (doc, state) => {
-  const rss = doc.querySelector('rss');
-  if (!doc.contains(rss)) {
-    throw new Error(i18next.t('errors.noRss'));
-  }
-  const channel = rss.querySelector('channel');
+  const channel = doc.querySelector('channel');
   const feedName = channel.querySelector('title');
   const feedDescription = channel.querySelector('description');
 
@@ -39,12 +41,12 @@ const loadData = (doc, state) => {
   };
   state.feeds = _.unionBy(state.feeds, [feed], 'name');
 
-  const postsLIst = channel.querySelectorAll('item');
-  const posts = Array.from(postsLIst)
+  const postsList = channel.querySelectorAll('item');
+  const posts = Array.from(postsList)
     .map((item) => ({
       name: item.querySelector('title').textContent,
       description: item.querySelector('description').textContent,
-      link: item.querySelector('link').nextSibling.textContent.replace(/\\n|\\t/g, ''),
+      link: item.querySelector('link').textContent,
       feedId: feed.id,
       id: _.uniqueId(),
     }));
@@ -54,7 +56,7 @@ const loadData = (doc, state) => {
 const checkNewFeed = (state, time) => {
   state.form.urlsList.forEach((url) => {
     getData(url)
-      .then((response) => parseData(response.data))
+      .then((response) => parseData(response.data.contents))
       .then((document) => loadData(document, state));
   });
   setTimeout(checkNewFeed, time, state, time);
@@ -96,7 +98,6 @@ export default () => {
       validationState: null,
       urlsList: [],
       error: null,
-      loading: null,
     },
     feeds: [],
     posts: [],
@@ -114,17 +115,16 @@ export default () => {
     const inputValue = formData.get('url');
     validateUrl(inputValue, state.form.urlsList)
       .then((content) => {
-        state.form.urlsList.push(content);
         state.form.validationState = 'valid';
-        state.form.loading = i18nInstance.t('succusess');
         return getData(content);
       })
-      .then((response) => parseData(response.data))
+      .then((response) => parseData(response.data.contents, i18nInstance.t('errors.noRss')))
       .then((document) => loadData(document, state))
+      .then(() => state.form.urlsList.push(inputValue))
       .then(() => checkNewFeed(state, 5000))
       .catch((er) => {
         state.form.validationState = 'invalid';
-        const [error] = er.errors;
+        const error = er.message;
         state.form.error = error;
       });
   });

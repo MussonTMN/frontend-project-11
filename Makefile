@@ -4,8 +4,14 @@ develop:
 install:
 	npm ci
 
+link:
+	npm link
+
 build:
 	npm run build
 
 lint:
 	npx eslint .
+
+test:
+	npx playwright test	
