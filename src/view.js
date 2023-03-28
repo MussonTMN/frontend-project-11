@@ -1,22 +1,44 @@
-const handleValidation = (elements, validationState, i18nInstance) => {
-  switch (validationState) {
-    case 'valid':
-      elements.feedback.textContent = i18nInstance.t('succusess');
-      elements.feedback.classList.remove('text-danger');
-      elements.feedback.classList.add('text-success');
-      elements.input.classList.remove('is-invalid');
-      elements.form.reset();
-      elements.input.focus();
+const handleState = (elements, formState, i18nInstance) => {
+  const {
+    feedback, input, form, button,
+  } = elements;
+
+  const spinner = () => {
+    const div = document.createElement('div');
+    div.classList.add('spinner-border', 'text-light');
+    div.setAttribute('role', 'status');
+
+    const span = document.createElement('span');
+    span.classList.add('sr-only');
+    div.append(span);
+    return div;
+  };
+
+  switch (formState) {
+    case 'loading':
+      button.setAttribute('disabled', '');
+      feedback.prepend(spinner());
       break;
 
-    case 'invalid':
-      elements.input.classList.add('is-invalid');
-      elements.feedback.classList.add('text-danger');
-      elements.feedback.classList.remove('text-success');
+    case 'success':
+      button.removeAttribute('disabled');
+      feedback.textContent = i18nInstance.t('succusess');
+      feedback.classList.remove('text-danger');
+      feedback.classList.add('text-success');
+      input.classList.remove('is-invalid');
+      form.reset();
+      input.focus();
+      break;
+
+    case 'error':
+      button.removeAttribute('disabled');
+      input.classList.add('is-invalid');
+      feedback.classList.add('text-danger');
+      feedback.classList.remove('text-success');
       break;
 
     default:
-      throw new Error(`Unknown validation state: ${validationState}`);
+      throw new Error(`Unknown state: ${formState}`);
   }
 };
 
@@ -104,8 +126,8 @@ const getModalWindow = (elements, post) => {
 
 const render = (elements, i18nInstance, state) => (path, value) => {
   switch (path) {
-    case 'form.validationState':
-      handleValidation(elements, value, i18nInstance);
+    case 'form.state':
+      handleState(elements, value, i18nInstance);
       break;
 
     case 'form.error':

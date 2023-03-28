@@ -29,15 +29,15 @@ const parseData = (response, error) => {
   return xml;
 };
 
-const loadData = (doc, state) => {
+const loadData = (doc, state, url) => {
   const channel = doc.querySelector('channel');
   const feedName = channel.querySelector('title');
   const feedDescription = channel.querySelector('description');
-
   const feed = {
     name: feedName.textContent,
     description: feedDescription.textContent,
     id: _.uniqueId(),
+    url,
   };
   state.feeds = _.unionBy(state.feeds, [feed], 'name');
 
@@ -53,13 +53,16 @@ const loadData = (doc, state) => {
   state.posts = _.unionBy(state.posts, posts, 'name');
 };
 
-const checkNewFeed = (state, time) => {
-  state.form.urlsList.forEach((url) => {
-    getData(url)
-      .then((response) => parseData(response.data.contents))
-      .then((document) => loadData(document, state));
+const checkNewFeed = (state, error) => {
+  const promises = state.feeds.map(({ url }) => getData(url));
+  Promise.all(promises).then((responses) => {
+    responses.forEach((response) => {
+      const document = parseData(response.data.contents, error);
+      loadData(document, state);
+    });
+  }).then(() => {
+    setTimeout(checkNewFeed, 5000, state);
   });
-  setTimeout(checkNewFeed, time, state, time);
 };
 
 export default () => {
@@ -90,13 +93,12 @@ export default () => {
     feedback: document.querySelector('.feedback'),
     feeds: document.querySelector('.feeds'),
     posts: document.querySelector('.posts'),
+    button: document.querySelector('.col-auto > button'),
   };
 
   const initialState = {
     form: {
-      processState: 'init',
-      validationState: null,
-      urlsList: [],
+      state: 'init',
       error: null,
     },
     feeds: [],
@@ -113,17 +115,19 @@ export default () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const inputValue = formData.get('url');
-    validateUrl(inputValue, state.form.urlsList)
-      .then((content) => {
-        state.form.validationState = 'valid';
-        return getData(content);
+    const urlsList = state.feeds.map(({ url }) => url);
+    validateUrl(inputValue, urlsList)
+      .then((link) => {
+        state.form.state = 'loading';
+        return getData(link);
       })
       .then((response) => parseData(response.data.contents, i18nInstance.t('errors.noRss')))
-      .then((document) => loadData(document, state))
-      .then(() => state.form.urlsList.push(inputValue))
-      .then(() => checkNewFeed(state, 5000))
+      .then((document) => loadData(document, state, inputValue))
+      .then(() => {
+        state.form.state = 'success';
+      })
       .catch((er) => {
-        state.form.validationState = 'invalid';
+        state.form.state = 'error';
         const error = er.message;
         state.form.error = error === 'Network Error' ? i18nInstance.t('errors.network') : error;
       });
@@ -134,10 +138,9 @@ export default () => {
     if (postId) {
       state.uiState.visitedPosts.add(postId);
     }
+    state.uiState.modalPost = state.posts.find(({ id }) => id === postId);
+    state.uiState.visitedPosts.add(postId);
   });
 
-  elements.modal.main.addEventListener('shown.bs.modal', (e) => {
-    const postId = e.relatedTarget.getAttribute('data-id');
-    state.uiState.modalPost = state.posts.find(({ id }) => id === postId);
-  });
+  checkNewFeed(state, i18nInstance.t('errors.noRss'));
 };
