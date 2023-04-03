@@ -68,15 +68,15 @@ const handleFeeds = (elements, feeds, i18nInstance) => {
     const feed = document.createElement('li');
     feed.classList.add('list-group-item', 'border-0', 'border-end-0');
 
-    const itemName = document.createElement('h3');
-    itemName.classList.add('h6', 'm-0');
-    itemName.textContent = item.name;
+    const itemTitle = document.createElement('h3');
+    itemTitle.classList.add('h6', 'm-0');
+    itemTitle.textContent = item.title;
 
     const itemDescription = document.createElement('p');
     itemDescription.classList.add('m-0', 'small', 'text-black-50');
     itemDescription.textContent = item.description;
 
-    feed.append(itemName, itemDescription);
+    feed.append(itemTitle, itemDescription);
     feedsList.prepend(feed);
   });
   feedsDiv.append(feedsList);
@@ -100,7 +100,7 @@ const handlePosts = (elements, i18nInstance, state) => {
     link.setAttribute('data-id', item.id);
     link.setAttribute('target', '_blank');
     link.setAttribute('rel', 'noopener noreferrer');
-    link.textContent = item.name;
+    link.textContent = item.title;
 
     const button = document.createElement('button');
     button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
@@ -118,8 +118,8 @@ const handlePosts = (elements, i18nInstance, state) => {
 
 const getModalWindow = (elements, post) => {
   const { title, body, readButton } = elements.modal;
-  const { name, description, link } = post;
-  title.textContent = name;
+  const { description, link } = post;
+  title.textContent = post.title;
   body.textContent = description;
   readButton.setAttribute('href', link);
 };

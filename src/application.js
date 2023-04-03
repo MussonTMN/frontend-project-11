@@ -5,13 +5,14 @@ import axios from 'axios';
 import _ from 'lodash';
 import render from './view';
 import resources from './locales/index';
+import parse from './parser';
 
 const validateUrl = (url, urlsList) => {
   const urlSchema = yup.string().url().required().notOneOf(urlsList);
   return urlSchema.validate(url, { abortEarly: false });
 };
 
-const getData = (url) => {
+const fetch = (url) => {
   const originsLink = 'https://allorigins.hexlet.app/get';
   const preparedURL = new URL(originsLink);
   preparedURL.searchParams.set('disableCache', 'true');
@@ -19,50 +20,42 @@ const getData = (url) => {
   return axios.get(preparedURL);
 };
 
-const parseData = (response, error) => {
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(response, 'text/xml');
-  const rss = xml.querySelector('rss');
-  if (!xml.contains(rss)) {
-    throw new Error(error);
-  }
-  return xml;
-};
-
-const loadData = (doc, state, url) => {
-  const channel = doc.querySelector('channel');
-  const feedName = channel.querySelector('title');
-  const feedDescription = channel.querySelector('description');
+const handleData = (data, state, url) => {
   const feed = {
-    name: feedName.textContent,
-    description: feedDescription.textContent,
+    title: data.feed.title,
+    description: data.feed.description,
     id: _.uniqueId(),
     url,
   };
-  state.feeds = _.unionBy(state.feeds, [feed], 'name');
+  state.feeds = _.unionBy(state.feeds, [feed], 'title');
 
-  const postsList = channel.querySelectorAll('item');
-  const posts = Array.from(postsList)
-    .map((item) => ({
-      name: item.querySelector('title').textContent,
-      description: item.querySelector('description').textContent,
-      link: item.querySelector('link').textContent,
+  const posts = data.posts
+    .map(({ title, link, description }) => ({
+      title,
+      description,
+      link,
       feedId: feed.id,
       id: _.uniqueId(),
     }));
-  state.posts = _.unionBy(state.posts, posts, 'name');
+  state.posts = _.unionBy(state.posts, posts, 'title');
 };
 
-const checkNewFeed = (state, error) => {
-  const promises = state.feeds.map(({ url }) => getData(url));
+const checkNewPosts = (state, i18nInstance) => {
+  const timeout = 5000;
+  const promises = state.feeds.map(({ url }) => fetch(url));
   Promise.all(promises).then((responses) => {
     responses.forEach((response) => {
-      const document = parseData(response.data.contents, error);
-      loadData(document, state);
+      const document = parse(response.data.contents);
+      handleData(document, state);
     });
-  }).then(() => {
-    setTimeout(checkNewFeed, 5000, state);
-  });
+  }).catch((er) => {
+    state.form.state = 'error';
+    const error = er.message;
+    state.form.error = i18nInstance.t(`errors.${error}`) ?? error;
+  })
+    .finally(() => {
+      setTimeout(checkNewPosts, timeout, state);
+    });
 };
 
 export default () => {
@@ -72,10 +65,10 @@ export default () => {
     resources,
   }).then(yup.setLocale({
     string: {
-      url: i18nInstance.t('errors.url'),
+      url: i18nInstance.t('url'),
     },
     mixed: {
-      notOneOf: i18nInstance.t('errors.notOneOf'),
+      notOneOf: i18nInstance.t('notOneOf'),
     },
   }));
 
@@ -119,17 +112,15 @@ export default () => {
     validateUrl(inputValue, urlsList)
       .then((link) => {
         state.form.state = 'loading';
-        return getData(link);
-      })
-      .then((response) => parseData(response.data.contents, i18nInstance.t('errors.noRss')))
-      .then((document) => loadData(document, state, inputValue))
-      .then(() => {
+        return fetch(link);
+      }).then((response) => {
+        const data = parse(response.data.contents);
+        handleData(data, state, inputValue);
         state.form.state = 'success';
-      })
-      .catch((er) => {
+      }).catch((er) => {
         state.form.state = 'error';
         const error = er.message;
-        state.form.error = error === 'Network Error' ? i18nInstance.t('errors.network') : error;
+        state.form.error = i18nInstance.t(`errors.${error}`) ?? error;
       });
   });
 
@@ -142,5 +133,5 @@ export default () => {
     state.uiState.visitedPosts.add(postId);
   });
 
-  checkNewFeed(state, i18nInstance.t('errors.noRss'));
+  checkNewPosts(state, i18nInstance);
 };
