@@ -17,7 +17,7 @@ const handleState = (elements, formState, i18nInstance) => {
   switch (formState) {
     case 'loading':
       button.setAttribute('disabled', '');
-      feedback.prepend(spinner());
+      feedback.replaceChildren(spinner());
       break;
 
     case 'success':

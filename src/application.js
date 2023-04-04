@@ -116,11 +116,13 @@ export default () => {
       }).then((response) => {
         const data = parse(response.data.contents);
         handleData(data, state, inputValue);
+      }).then(() => {
         state.form.state = 'success';
-      }).catch((er) => {
+      })
+      .catch((er) => {
         state.form.state = 'error';
         const error = er.message;
-        state.form.error = i18nInstance.t(`errors.${error}`) ?? error;
+        state.form.error = error === 'Network Error' ? i18nInstance.t('errors.network') : i18nInstance.t(`errors.${error}`);
       });
   });
 
