@@ -40,19 +40,15 @@ const handleData = (data, state, url) => {
   state.posts = _.unionBy(state.posts, posts, 'title');
 };
 
-const checkNewPosts = (state, i18nInstance) => {
+const checkNewPosts = (state) => {
   const timeout = 5000;
   const promises = state.feeds.map(({ url }) => fetch(url));
   Promise.all(promises).then((responses) => {
     responses.forEach((response) => {
-      const document = parse(response.data.contents);
-      handleData(document, state);
+      const data = parse(response.data.contents);
+      handleData(data, state);
     });
-  }).catch((er) => {
-    state.form.state = 'error';
-    const error = er.message;
-    state.form.error = i18nInstance.t(`errors.${error}`) ?? error;
-  })
+  }).catch((er) => console.error(er))
     .finally(() => {
       setTimeout(checkNewPosts, timeout, state);
     });
@@ -87,6 +83,7 @@ export default () => {
     feeds: document.querySelector('.feeds'),
     posts: document.querySelector('.posts'),
     button: document.querySelector('.col-auto > button'),
+    spinner: document.querySelector('.spinner-border'),
   };
 
   const initialState = {
@@ -106,23 +103,25 @@ export default () => {
 
   elements.form.addEventListener('submit', (e) => {
     e.preventDefault();
+    state.form.state = 'loading';
     const formData = new FormData(e.target);
     const inputValue = formData.get('url');
     const urlsList = state.feeds.map(({ url }) => url);
     validateUrl(inputValue, urlsList)
-      .then((link) => {
-        state.form.state = 'loading';
-        return fetch(link);
-      }).then((response) => {
+      .then((link) => fetch(link))
+      .then((response) => {
         const data = parse(response.data.contents);
         handleData(data, state, inputValue);
-      }).then(() => {
         state.form.state = 'success';
-      })
-      .catch((er) => {
+      }).catch((er) => {
         state.form.state = 'error';
         const error = er.message;
-        state.form.error = error === 'Network Error' ? i18nInstance.t('errors.network') : i18nInstance.t(`errors.${error}`);
+        if (er.isParsingError) {
+          state.form.error = i18nInstance.t('errors.noRss');
+          console.error(error);
+        } else {
+          state.form.error = error === 'Network Error' ? i18nInstance.t('errors.network') : i18nInstance.t(`errors.${error}`);
+        }
       });
   });
 
@@ -135,5 +134,5 @@ export default () => {
     state.uiState.visitedPosts.add(postId);
   });
 
-  checkNewPosts(state, i18nInstance);
+  checkNewPosts(state);
 };

@@ -1,9 +1,17 @@
-const parse = (response) => {
+class ParsingError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ParsingError';
+    this.isParsingError = true;
+  }
+}
+
+export default (response) => {
   const parser = new DOMParser();
   const xml = parser.parseFromString(response, 'text/xml');
-
-  if (!xml.contains(xml.querySelector('rss'))) {
-    throw new Error('noRss');
+  const parseError = xml.querySelector('parsererror');
+  if (xml.contains(parseError)) {
+    throw new ParsingError(parseError.textContent);
   }
 
   const channel = xml.querySelector('channel');
@@ -24,12 +32,4 @@ const parse = (response) => {
     }));
 
   return { feed, posts };
-};
-
-export default (res) => {
-  try {
-    return parse(res);
-  } catch (err) {
-    throw new Error('noRss');
-  }
 };

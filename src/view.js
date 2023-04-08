@@ -1,27 +1,17 @@
 const handleState = (elements, formState, i18nInstance) => {
   const {
-    feedback, input, form, button,
+    feedback, input, form, button, spinner,
   } = elements;
-
-  const spinner = () => {
-    const div = document.createElement('div');
-    div.classList.add('spinner-border', 'text-light');
-    div.setAttribute('role', 'status');
-
-    const span = document.createElement('span');
-    span.classList.add('sr-only');
-    div.append(span);
-    return div;
-  };
 
   switch (formState) {
     case 'loading':
       button.setAttribute('disabled', '');
-      feedback.replaceChildren(spinner());
+      spinner.setAttribute('style', 'opacity: 1');
       break;
 
     case 'success':
       button.removeAttribute('disabled');
+      spinner.setAttribute('style', 'opacity: 0');
       feedback.textContent = i18nInstance.t('succusess');
       feedback.classList.remove('text-danger');
       feedback.classList.add('text-success');
@@ -31,6 +21,7 @@ const handleState = (elements, formState, i18nInstance) => {
       break;
 
     case 'error':
+      spinner.setAttribute('style', 'opacity: 0');
       button.removeAttribute('disabled');
       input.classList.add('is-invalid');
       feedback.classList.add('text-danger');
