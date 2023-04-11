@@ -34,6 +34,10 @@ $ make build
 $ make develop
 ```
 
+## Системные требования:
+node.js v18 и выше
+
+
 ## Демо:
 https://frontend-project-11-roan-nine.vercel.app/
 
